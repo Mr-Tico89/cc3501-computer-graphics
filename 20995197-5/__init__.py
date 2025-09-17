@@ -37,27 +37,22 @@ class Attractor:
         # Inicializar OpenGL después del burn-in
         self.init_opengl()
     
-    def load_shader(self, shader_type, source):
+    def load_shader(self, shader_type, source_or_file):
         #Carga y compila un shader
+        script_dir = os.path.dirname(__file__)
+        filepath = os.path.join(script_dir, source_or_file)
+        with open(filepath, 'r', encoding='utf-8') as f:
+            source = f.read()
+
         shader = GL.glCreateShader(shader_type)
         GL.glShaderSource(shader, source)
         GL.glCompileShader(shader)
         return shader
     
-    def load_shader_from_file(self, shader_type, filename):
-        #Carga un shader desde archivo    
-        script_dir = os.path.dirname(__file__)
-        filepath = os.path.join(script_dir, filename)
-            
-        with open(filepath, 'r', encoding='utf-8') as f:
-            source = f.read()
-
-        return self.load_shader(shader_type, source)
-    
     def init_opengl(self):
         # Cargar shaders
-        vertex_shader = self.load_shader_from_file(GL.GL_VERTEX_SHADER, "vertex_shader.glsl")
-        fragment_shader = self.load_shader_from_file(GL.GL_FRAGMENT_SHADER, "fragment_shader.glsl")
+        vertex_shader = self.load_shader(GL.GL_VERTEX_SHADER, "vertex_shader.glsl")
+        fragment_shader = self.load_shader(GL.GL_FRAGMENT_SHADER, "fragment_shader.glsl")
 
         # Crear programa de shader
         self.shader_program = GL.glCreateProgram()
