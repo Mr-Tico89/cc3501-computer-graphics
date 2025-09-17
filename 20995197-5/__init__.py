@@ -30,6 +30,9 @@ class SimpleAttractor:
     
     def update_lorenz(self):
         """Actualiza un paso del sistema de Lorenz"""
+        # Guardar estado anterior para calcular velocidad
+        prev_x, prev_y, prev_z = self.x, self.y, self.z
+        
         dx = self.sigma * (self.y - self.x)
         dy = self.x * (self.rho - self.z) - self.y
         dz = self.x * self.y - self.beta * self.z
@@ -38,36 +41,45 @@ class SimpleAttractor:
         self.y += dy * self.dt
         self.z += dz * self.dt
         
+        # Calcular velocidad para ángulo de trayectoria
+        vel_x = self.x - prev_x
+        vel_y = self.y - prev_y
+        vel_z = self.z - prev_z
+        
         # Normalizar coordenadas para cada vista
         if self.current_view == 0:  # XY
             point = [self.x / 25.0, self.y / 25.0]
+            angle = math.atan2(vel_y, vel_x)
         elif self.current_view == 1:  # XZ
-            point = [self.x / 25.0, (self.z - 15.0) / 25.0]  # Centrar Z alrededor de 15
+            point = [self.x / 25.0, (self.z - 15.0) / 25.0]
+            angle = math.atan2(vel_z, vel_x)
         else:  # YZ
-            point = [self.y / 25.0, (self.z - 15.0) / 25.0]  # Centrar Z alrededor de 15
+            point = [self.y / 25.0, (self.z - 15.0) / 25.0]
+            angle = math.atan2(vel_z, vel_y)
         
-        self.points.append(point)
+        # Agregar punto con su ángulo
+        self.points.append([point[0], point[1], angle])
         
         # Mantener solo los últimos puntos
         if len(self.points) > self.max_points:
             self.points.pop(0)
     
-    def get_color(self, index):
-        """Calcula color HSV basado en posición y tiempo"""
+    def get_color_hsv(self, index, angle):
+        """Calcula color HSV según los requisitos de la tarea"""
         total = len(self.points)
         if total == 0:
             return (1.0, 1.0, 1.0)
         
-        # Hue basado en la posición en la trayectoria
-        hue = (index / total) * 360.0
+        # Matiz (H): basado en el ángulo de la trayectoria
+        hue = (angle + math.pi) / (2 * math.pi)  # Normalizar a [0,1]
         
-        # Saturación basada en la densidad (más reciente = más saturado)
-        saturation = min(1.0, index / (total * 0.5))
+        # Saturación (S): basada en densidad normalizada (más reciente = más saturado)
+        saturation = min(1.0, index / (total * 0.7))
         
-        # Valor basado en qué tan reciente es el punto
-        value = 0.3 + 0.7 * (index / total)
+        # Valor/Brillo (V): alto para puntos visitados
+        value = 0.8 + 0.2 * (index / total)
         
-        return self.hsv_to_rgb(hue, saturation, value)
+        return self.hsv_to_rgb(hue * 360.0, saturation, value)
     
     def hsv_to_rgb(self, h, s, v):
         """Convierte HSV a RGB"""
@@ -102,19 +114,33 @@ class SimpleAttractor:
         self.points.clear()
     
     def draw(self):
-        """Dibuja el atractor usando OpenGL inmediato"""
+        """Dibuja el atractor usando puntos simples"""
         # Actualizar varios puntos por frame
         for _ in range(3):
             self.update_lorenz()
         
-        # Dibujar líneas conectando los puntos
+        # Dibujar puntos usando funciones básicas de pyglet
         if len(self.points) > 1:
-            GL.glBegin(GL.GL_LINE_STRIP)
-            for i, point in enumerate(self.points):
-                color = self.get_color(i)
-                GL.glColor3f(*color)
-                GL.glVertex2f(point[0], point[1])
-            GL.glEnd()
+            # Convertir puntos a coordenadas de pantalla
+            points_to_draw = []
+            colors_to_draw = []
+            
+            for i, point_data in enumerate(self.points):
+                x, y, angle = point_data
+                # Convertir de [-1,1] a coordenadas de pantalla
+                screen_x = int((x + 1.0) * 0.5 * self.width)
+                screen_y = int((y + 1.0) * 0.5 * self.height)
+                
+                color = self.get_color_hsv(i, angle)
+                points_to_draw.append((screen_x, screen_y))
+                colors_to_draw.append(color)
+            
+            # Dibujar usando pyglet shapes
+            for i, (point, color) in enumerate(zip(points_to_draw, colors_to_draw)):
+                # Crear un círculo pequeño para cada punto
+                circle = pyglet.shapes.Circle(point[0], point[1], 1.5, 
+                                            color=(int(color[0]*255), int(color[1]*255), int(color[2]*255)))
+                circle.draw()
 
 @click.command("tarea", short_help='Atractor de Lorenz Simple')
 @click.option("--width", type=int, default=800)
@@ -133,20 +159,6 @@ def tarea(width, height):
     @win.event
     def on_draw():
         win.clear()
-        
-        # Configurar viewport
-        GL.glViewport(0, 0, width, height)
-        GL.glMatrixMode(GL.GL_PROJECTION)
-        GL.glLoadIdentity()
-        GL.glOrtho(-1.2, 1.2, -1.2, 1.2, -1, 1)
-        GL.glMatrixMode(GL.GL_MODELVIEW)
-        GL.glLoadIdentity()
-        
-        # Habilitar líneas suaves
-        GL.glEnable(GL.GL_LINE_SMOOTH)
-        GL.glEnable(GL.GL_BLEND)
-        GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
-        GL.glLineWidth(1.5)
         
         # Dibujar atractor
         attractor.draw()
