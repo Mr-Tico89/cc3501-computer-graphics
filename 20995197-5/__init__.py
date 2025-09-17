@@ -37,6 +37,7 @@ class Attractor:
         # Inicializar OpenGL después del burn-in
         self.init_opengl()
     
+
     def load_shader(self, shader_type, source_or_file):
         #Carga y compila un shader
         script_dir = os.path.dirname(__file__)
@@ -49,6 +50,7 @@ class Attractor:
         GL.glCompileShader(shader)
         return shader
     
+
     def init_opengl(self):
         # Cargar shaders
         vertex_shader = self.load_shader(GL.GL_VERTEX_SHADER, "vertex_shader.glsl")
@@ -91,6 +93,7 @@ class Attractor:
         GL.glBindVertexArray(0)
         GL.glUseProgram(0)
     
+
     def update_lorenz(self):
         # Guardar estado anterior para calcular velocidad
         prev_x, prev_y, prev_z = self.x, self.y, self.z
@@ -128,12 +131,14 @@ class Attractor:
         if len(self.points) > self.max_points:
             self.points.pop(0)
     
+
     def switch_view(self):
         # Cambia la vista y reinicia los puntos
         self.current_view = (self.current_view + 1) % 3
         self.points.clear()
         for _ in range(100):
             self.update_lorenz()
+
 
     def draw(self):
         # Actualizar varios puntos por frame
@@ -175,9 +180,11 @@ class Attractor:
         GL.glUseProgram(0)
         GL.glBindVertexArray(0)
     
+
 @click.command("tarea", short_help='Atractor de lorenz')
 @click.option("--width", type=int, default=800)
 @click.option("--height", type=int, default=600)
+
 
 def tarea(width=800, height=600):
     win = pyglet.window.Window(width, height, caption="Atractor de Lorenz - ESPACIO: cambiar vista")
